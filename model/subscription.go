@@ -198,11 +198,12 @@ type SubscriptionOrder struct {
 	PlanId int     `json:"plan_id" gorm:"index"`
 	Money  float64 `json:"money"`
 
-	TradeNo       string `json:"trade_no" gorm:"unique;type:varchar(255);index"`
-	PaymentMethod string `json:"payment_method" gorm:"type:varchar(50)"`
-	Status        string `json:"status"`
-	CreateTime    int64  `json:"create_time"`
-	CompleteTime  int64  `json:"complete_time"`
+	TradeNo         string `json:"trade_no" gorm:"unique;type:varchar(255);index"`
+	PaymentMethod   string `json:"payment_method" gorm:"type:varchar(50)"`
+	ProviderTradeNo string `json:"provider_trade_no" gorm:"type:varchar(255);index"`
+	Status          string `json:"status"`
+	CreateTime      int64  `json:"create_time"`
+	CompleteTime    int64  `json:"complete_time"`
 
 	ProviderPayload string `json:"provider_payload" gorm:"type:text"`
 }
@@ -506,6 +507,10 @@ func CreateUserSubscriptionFromPlanTx(tx *gorm.DB, userId int, plan *Subscriptio
 
 // Complete a subscription order (idempotent). Creates a UserSubscription snapshot from the plan.
 func CompleteSubscriptionOrder(tradeNo string, providerPayload string) error {
+	return CompleteSubscriptionOrderWithProvider(tradeNo, "", providerPayload)
+}
+
+func CompleteSubscriptionOrderWithProvider(tradeNo string, providerTradeNo string, providerPayload string) error {
 	if tradeNo == "" {
 		return errors.New("tradeNo is empty")
 	}
@@ -541,14 +546,17 @@ func CompleteSubscriptionOrder(tradeNo string, providerPayload string) error {
 		if err != nil {
 			return err
 		}
+		if providerTradeNo != "" {
+			order.ProviderTradeNo = providerTradeNo
+		}
+		if providerPayload != "" {
+			order.ProviderPayload = providerPayload
+		}
 		if err := upsertSubscriptionTopUpTx(tx, &order); err != nil {
 			return err
 		}
 		order.Status = common.TopUpStatusSuccess
 		order.CompleteTime = common.GetTimestamp()
-		if providerPayload != "" {
-			order.ProviderPayload = providerPayload
-		}
 		if err := tx.Save(&order).Error; err != nil {
 			return err
 		}
@@ -596,6 +604,12 @@ func upsertSubscriptionTopUpTx(tx *gorm.DB, order *SubscriptionOrder) error {
 	topup.Money = order.Money
 	if topup.PaymentMethod == "" {
 		topup.PaymentMethod = order.PaymentMethod
+	}
+	if order.ProviderTradeNo != "" {
+		topup.ProviderTradeNo = order.ProviderTradeNo
+	}
+	if order.ProviderPayload != "" {
+		topup.ProviderPayload = order.ProviderPayload
 	}
 	if topup.CreateTime == 0 {
 		topup.CreateTime = order.CreateTime
