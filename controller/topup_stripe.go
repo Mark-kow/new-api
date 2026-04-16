@@ -314,6 +314,12 @@ func sessionExpired(event stripe.Event) {
 		return
 	}
 
+	// 校验支付方式，防止跨渠道订单被 Stripe expired 事件误操作
+	if topUp.PaymentMethod != PaymentMethodStripe {
+		log.Printf("过期事件订单支付方式不匹配: %s, ref: %s", topUp.PaymentMethod, referenceId)
+		return
+	}
+
 	if topUp.Status != common.TopUpStatusPending {
 		log.Println("充值订单状态错误", referenceId)
 	}

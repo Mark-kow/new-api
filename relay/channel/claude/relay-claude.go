@@ -399,6 +399,13 @@ func RequestOpenAI2ClaudeMessage(c *gin.Context, textRequest dto.GeneralOpenAIRe
 						})
 					}
 				}
+				// 当所有文本内容均为空且无媒体/工具调用时，添加占位符避免向 Claude 发送空 content 数组
+				if len(claudeMediaMessages) == 0 {
+					claudeMediaMessages = append(claudeMediaMessages, dto.ClaudeMediaMessage{
+						Type: "text",
+						Text: common.GetPointer[string]("..."),
+					})
+				}
 				claudeMessage.Content = claudeMediaMessages
 			}
 			claudeMessages = append(claudeMessages, claudeMessage)
