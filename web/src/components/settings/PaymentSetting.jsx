@@ -24,6 +24,8 @@ import SettingsPaymentGateway from '../../pages/Setting/Payment/SettingsPaymentG
 import SettingsPaymentGatewayStripe from '../../pages/Setting/Payment/SettingsPaymentGatewayStripe';
 import SettingsPaymentGatewayCreem from '../../pages/Setting/Payment/SettingsPaymentGatewayCreem';
 import SettingsPaymentGatewayWaffo from '../../pages/Setting/Payment/SettingsPaymentGatewayWaffo';
+import SettingsPaymentGatewayAlipay from '../../pages/Setting/Payment/SettingsPaymentGatewayAlipay';
+import SettingsPaymentGatewayWechat from '../../pages/Setting/Payment/SettingsPaymentGatewayWechat';
 import { API, showError, toBoolean } from '../../helpers';
 import { useTranslation } from 'react-i18next';
 
@@ -48,6 +50,21 @@ const PaymentSetting = () => {
     StripeUnitPrice: 8.0,
     StripeMinTopUp: 1,
     StripePromotionCodesEnabled: false,
+    AlipayEnabled: false,
+    AlipayAppID: '',
+    AlipayPrivateKey: '',
+    AlipayPublicKey: '',
+    AlipayNotifyURL: '',
+    AlipayReturnURL: '',
+    WechatPayEnabled: false,
+    WechatPayAppID: '',
+    WechatPayMchID: '',
+    WechatPaySerialNo: '',
+    WechatPayAPIv3Key: '',
+    WechatPayPrivateKey: '',
+    WechatPayPlatformCert: '',
+    WechatPayNotifyURL: '',
+    WechatPayH5Domain: '',
   });
 
   let [loading, setLoading] = useState(false);
@@ -140,6 +157,12 @@ const PaymentSetting = () => {
         </Card>
         <Card style={{ marginTop: '10px' }}>
           <SettingsPaymentGatewayStripe options={inputs} refresh={onRefresh} />
+        </Card>
+        <Card style={{ marginTop: '10px' }}>
+          <SettingsPaymentGatewayAlipay options={inputs} refresh={onRefresh} />
+        </Card>
+        <Card style={{ marginTop: '10px' }}>
+          <SettingsPaymentGatewayWechat options={inputs} refresh={onRefresh} />
         </Card>
         <Card style={{ marginTop: '10px' }}>
           <SettingsPaymentGatewayCreem options={inputs} refresh={onRefresh} />

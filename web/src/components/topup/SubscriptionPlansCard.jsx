@@ -17,7 +17,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Badge,
   Button,
@@ -34,6 +34,7 @@ import { API, showError, showSuccess, renderQuota } from '../../helpers';
 import { getCurrencyConfig } from '../../helpers/render';
 import { RefreshCw, Sparkles } from 'lucide-react';
 import SubscriptionPurchaseModal from './modals/SubscriptionPurchaseModal';
+import PaymentQRCodeModal from './modals/PaymentQRCodeModal';
 import {
   formatSubscriptionDuration,
   formatSubscriptionResetPeriod,
@@ -44,7 +45,18 @@ const { Text } = Typography;
 // 过滤易支付方式
 function getEpayMethods(payMethods = []) {
   return (payMethods || []).filter(
-    (m) => m?.type && m.type !== 'stripe' && m.type !== 'creem',
+    (m) =>
+      m?.type &&
+      m.type !== 'stripe' &&
+      m.type !== 'creem' &&
+      m.type !== 'alipay_direct' &&
+      m.type !== 'wechat_direct',
+  );
+}
+
+function getDirectMethods(payMethods = []) {
+  return (payMethods || []).filter(
+    (m) => m?.type === 'alipay_direct' || m?.type === 'wechat_direct',
   );
 }
 
@@ -89,8 +101,18 @@ const SubscriptionPlansCard = ({
   const [paying, setPaying] = useState(false);
   const [selectedEpayMethod, setSelectedEpayMethod] = useState('');
   const [refreshing, setRefreshing] = useState(false);
+  const [qrPaymentState, setQrPaymentState] = useState({
+    visible: false,
+    qrCodeUrl: '',
+    tradeNo: '',
+    paymentMethod: '',
+  });
 
   const epayMethods = useMemo(() => getEpayMethods(payMethods), [payMethods]);
+  const directMethods = useMemo(
+    () => getDirectMethods(payMethods),
+    [payMethods],
+  );
 
   const openBuy = (p) => {
     setSelectedPlan(p);
@@ -197,6 +219,97 @@ const SubscriptionPlansCard = ({
       setPaying(false);
     }
   };
+
+  const getClientScene = () => {
+    if (typeof window === 'undefined') {
+      return 'pc';
+    }
+    const ua = window.navigator?.userAgent || '';
+    return /Android|iPhone|iPad|iPod|Mobile/i.test(ua) ? 'mobile' : 'pc';
+  };
+
+  const closeQrModal = () => {
+    setQrPaymentState({
+      visible: false,
+      qrCodeUrl: '',
+      tradeNo: '',
+      paymentMethod: '',
+    });
+  };
+
+  const payDirect = async (paymentMethod) => {
+    setPaying(true);
+    try {
+      const endpoint =
+        paymentMethod === 'alipay_direct'
+          ? '/api/subscription/alipay/pay'
+          : '/api/subscription/wechat/pay';
+      const res = await API.post(endpoint, {
+        plan_id: selectedPlan.plan.id,
+        client_scene: getClientScene(),
+      });
+      if (res.data?.message === 'success') {
+        const payload = res.data?.data || {};
+        if (payload.action === 'redirect' && payload.redirect_url) {
+          window.location.href = payload.redirect_url;
+        } else if (payload.action === 'qr' && payload.qr_code_url) {
+          setQrPaymentState({
+            visible: true,
+            qrCodeUrl: payload.qr_code_url,
+            tradeNo: payload.trade_no,
+            paymentMethod,
+          });
+          showSuccess(t('已发起支付，请扫码完成'));
+        } else {
+          showError(t('支付响应格式错误'));
+        }
+      } else {
+        const errorMsg =
+          typeof res.data?.data === 'string'
+            ? res.data.data
+            : res.data?.message || t('支付失败');
+        showError(errorMsg);
+      }
+    } catch (e) {
+      showError(t('支付请求失败'));
+    } finally {
+      setPaying(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!qrPaymentState.visible || !qrPaymentState.tradeNo) {
+      return undefined;
+    }
+    const timer = setInterval(async () => {
+      try {
+        const res = await API.get('/api/subscription/status', {
+          params: { trade_no: qrPaymentState.tradeNo },
+        });
+        if (!res.data?.success) {
+          return;
+        }
+        const status = res.data?.data?.status;
+        if (status === 'success') {
+          closeQrModal();
+          closeBuy();
+          await reloadSubscriptionSelf?.();
+          showSuccess(t('支付成功'));
+        } else if (status === 'failed' || status === 'expired') {
+          closeQrModal();
+          showError(t('支付失败'));
+        }
+      } catch (error) {
+        // ignore polling errors
+      }
+    }, 3000);
+    return () => clearInterval(timer);
+  }, [
+    qrPaymentState.visible,
+    qrPaymentState.tradeNo,
+    reloadSubscriptionSelf,
+    t,
+  ]);
 
   // 当前订阅信息 - 支持多个订阅
   const hasActiveSubscription = activeSubscriptions.length > 0;
@@ -670,6 +783,7 @@ const SubscriptionPlansCard = ({
         selectedEpayMethod={selectedEpayMethod}
         setSelectedEpayMethod={setSelectedEpayMethod}
         epayMethods={epayMethods}
+        directMethods={directMethods}
         enableOnlineTopUp={enableOnlineTopUp}
         enableStripeTopUp={enableStripeTopUp}
         enableCreemTopUp={enableCreemTopUp}
@@ -684,6 +798,19 @@ const SubscriptionPlansCard = ({
         onPayStripe={payStripe}
         onPayCreem={payCreem}
         onPayEpay={payEpay}
+        onPayDirect={payDirect}
+      />
+      <PaymentQRCodeModal
+        visible={qrPaymentState.visible}
+        onCancel={closeQrModal}
+        t={t}
+        qrCodeUrl={qrPaymentState.qrCodeUrl}
+        tradeNo={qrPaymentState.tradeNo}
+        paymentMethodName={
+          directMethods.find(
+            (item) => item.type === qrPaymentState.paymentMethod,
+          )?.name || qrPaymentState.paymentMethod
+        }
       />
     </>
   );

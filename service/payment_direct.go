@@ -335,7 +335,7 @@ func (s *AlipayService) createPCPayment(req *DirectPaymentRequest) (*DirectPayme
 		if msg == "" {
 			msg = "alipay precreate failed"
 		}
-		return nil, fmt.Errorf(msg)
+		return nil, fmt.Errorf("%s", msg)
 	}
 	return &DirectPaymentResponse{
 		Provider:  "alipay",

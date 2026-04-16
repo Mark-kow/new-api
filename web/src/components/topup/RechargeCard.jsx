@@ -56,6 +56,8 @@ const RechargeCard = ({
   t,
   enableOnlineTopUp,
   enableStripeTopUp,
+  enableAlipayDirectTopUp,
+  enableWechatDirectTopUp,
   enableCreemTopUp,
   creemProducts,
   creemPreTopUp,
@@ -227,19 +229,34 @@ const RechargeCard = ({
           <div className='py-8 flex justify-center'>
             <Spin size='large' />
           </div>
-        ) : enableOnlineTopUp || enableStripeTopUp || enableCreemTopUp || enableWaffoTopUp ? (
+        ) : enableOnlineTopUp ||
+          enableStripeTopUp ||
+          enableAlipayDirectTopUp ||
+          enableWechatDirectTopUp ||
+          enableCreemTopUp ||
+          enableWaffoTopUp ? (
           <Form
             getFormApi={(api) => (onlineFormApiRef.current = api)}
             initValues={{ topUpCount: topUpCount }}
           >
             <div className='space-y-6'>
-              {(enableOnlineTopUp || enableStripeTopUp || enableWaffoTopUp) && (
+              {(enableOnlineTopUp ||
+                enableStripeTopUp ||
+                enableAlipayDirectTopUp ||
+                enableWechatDirectTopUp ||
+                enableWaffoTopUp) && (
                 <Row gutter={12}>
                   <Col xs={24} sm={24} md={24} lg={10} xl={10}>
                     <Form.InputNumber
                       field='topUpCount'
                       label={t('充值数量')}
-                      disabled={!enableOnlineTopUp && !enableStripeTopUp && !enableWaffoTopUp}
+                      disabled={
+                        !enableOnlineTopUp &&
+                        !enableStripeTopUp &&
+                        !enableAlipayDirectTopUp &&
+                        !enableWechatDirectTopUp &&
+                        !enableWaffoTopUp
+                      }
                       placeholder={
                         t('充值数量，最低 ') + renderQuotaWithAmount(minTopUp)
                       }
@@ -291,77 +308,100 @@ const RechargeCard = ({
                       style={{ width: '100%' }}
                     />
                   </Col>
-                  {payMethods && payMethods.filter(m => m.type !== 'waffo').length > 0 && (
-                  <Col xs={24} sm={24} md={24} lg={14} xl={14}>
-                    <Form.Slot label={t('选择支付方式')}>
-                        <Space wrap>
-                          {payMethods.filter(m => m.type !== 'waffo').map((payMethod) => {
-                            const minTopupVal = Number(payMethod.min_topup) || 0;
-                            const isStripe = payMethod.type === 'stripe';
-                            const disabled =
-                              (!enableOnlineTopUp && !isStripe) ||
-                              (!enableStripeTopUp && isStripe) ||
-                              minTopupVal > Number(topUpCount || 0);
+                  {payMethods &&
+                    payMethods.filter((m) => m.type !== 'waffo').length > 0 && (
+                      <Col xs={24} sm={24} md={24} lg={14} xl={14}>
+                        <Form.Slot label={t('选择支付方式')}>
+                          <Space wrap>
+                            {payMethods
+                              .filter((m) => m.type !== 'waffo')
+                              .map((payMethod) => {
+                                const minTopupVal =
+                                  Number(payMethod.min_topup) || 0;
+                                const isStripe = payMethod.type === 'stripe';
+                                const isAlipayDirect =
+                                  payMethod.type === 'alipay_direct';
+                                const isWechatDirect =
+                                  payMethod.type === 'wechat_direct';
+                                const isOfficialDirect =
+                                  isAlipayDirect || isWechatDirect;
+                                const disabled =
+                                  (!enableOnlineTopUp &&
+                                    !isStripe &&
+                                    !isOfficialDirect) ||
+                                  (!enableStripeTopUp && isStripe) ||
+                                  (!enableAlipayDirectTopUp &&
+                                    isAlipayDirect) ||
+                                  (!enableWechatDirectTopUp &&
+                                    isWechatDirect) ||
+                                  minTopupVal > Number(topUpCount || 0);
 
-                            const buttonEl = (
-                              <Button
-                                key={payMethod.type}
-                                theme='outline'
-                                type='tertiary'
-                                onClick={() => preTopUp(payMethod.type)}
-                                disabled={disabled}
-                                loading={
-                                  paymentLoading && payWay === payMethod.type
-                                }
-                                icon={
-                                  payMethod.type === 'alipay' ? (
-                                    <SiAlipay size={18} color='#1677FF' />
-                                  ) : payMethod.type === 'wxpay' ? (
-                                    <SiWechat size={18} color='#07C160' />
-                                  ) : payMethod.type === 'stripe' ? (
-                                    <SiStripe size={18} color='#635BFF' />
-                                  ) : (
-                                    <CreditCard
-                                      size={18}
-                                      color={
-                                        payMethod.color ||
-                                        'var(--semi-color-text-2)'
-                                      }
-                                    />
-                                  )
-                                }
-                                className='!rounded-lg !px-4 !py-2'
-                              >
-                                {payMethod.name}
-                              </Button>
-                            );
+                                const buttonEl = (
+                                  <Button
+                                    key={payMethod.type}
+                                    theme='outline'
+                                    type='tertiary'
+                                    onClick={() => preTopUp(payMethod.type)}
+                                    disabled={disabled}
+                                    loading={
+                                      paymentLoading &&
+                                      payWay === payMethod.type
+                                    }
+                                    icon={
+                                      payMethod.type === 'alipay' ||
+                                      payMethod.type === 'alipay_direct' ? (
+                                        <SiAlipay size={18} color='#1677FF' />
+                                      ) : payMethod.type === 'wxpay' ||
+                                        payMethod.type === 'wechat_direct' ? (
+                                        <SiWechat size={18} color='#07C160' />
+                                      ) : payMethod.type === 'stripe' ? (
+                                        <SiStripe size={18} color='#635BFF' />
+                                      ) : (
+                                        <CreditCard
+                                          size={18}
+                                          color={
+                                            payMethod.color ||
+                                            'var(--semi-color-text-2)'
+                                          }
+                                        />
+                                      )
+                                    }
+                                    className='!rounded-lg !px-4 !py-2'
+                                  >
+                                    {payMethod.name}
+                                  </Button>
+                                );
 
-                            return disabled &&
-                              minTopupVal > Number(topUpCount || 0) ? (
-                              <Tooltip
-                                content={
-                                  t('此支付方式最低充值金额为') +
-                                  ' ' +
-                                  minTopupVal
-                                }
-                                key={payMethod.type}
-                              >
-                                {buttonEl}
-                              </Tooltip>
-                            ) : (
-                              <React.Fragment key={payMethod.type}>
-                                {buttonEl}
-                              </React.Fragment>
-                            );
-                          })}
-                        </Space>
-                    </Form.Slot>
-                  </Col>
-                  )}
+                                return disabled &&
+                                  minTopupVal > Number(topUpCount || 0) ? (
+                                  <Tooltip
+                                    content={
+                                      t('此支付方式最低充值金额为') +
+                                      ' ' +
+                                      minTopupVal
+                                    }
+                                    key={payMethod.type}
+                                  >
+                                    {buttonEl}
+                                  </Tooltip>
+                                ) : (
+                                  <React.Fragment key={payMethod.type}>
+                                    {buttonEl}
+                                  </React.Fragment>
+                                );
+                              })}
+                          </Space>
+                        </Form.Slot>
+                      </Col>
+                    )}
                 </Row>
               )}
 
-              {(enableOnlineTopUp || enableStripeTopUp || enableWaffoTopUp) && (
+              {(enableOnlineTopUp ||
+                enableStripeTopUp ||
+                enableAlipayDirectTopUp ||
+                enableWechatDirectTopUp ||
+                enableWaffoTopUp) && (
                 <Form.Slot
                   label={
                     <div className='flex items-center gap-2'>
@@ -388,7 +428,9 @@ const RechargeCard = ({
                   <div className='grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2'>
                     {presetAmounts.map((preset, index) => {
                       const discount =
-                        preset.discount || topupInfo?.discount?.[preset.value] || 1.0;
+                        preset.discount ||
+                        topupInfo?.discount?.[preset.value] ||
+                        1.0;
                       const originalPrice = preset.value * priceRatio;
                       const discountedPrice = originalPrice * discount;
                       const hasDiscount = discount < 1.0;
@@ -404,7 +446,7 @@ const RechargeCard = ({
                           const s = JSON.parse(statusStr);
                           usdRate = s?.usd_exchange_rate || 7;
                         }
-                      } catch (e) { }
+                      } catch (e) {}
 
                       let displayValue = preset.value; // 显示的数量
                       let displayActualPay = actualPay;
@@ -455,7 +497,10 @@ const RechargeCard = ({
                               {hasDiscount && (
                                 <Tag style={{ marginLeft: 4 }} color='green'>
                                   {t('折').includes('off')
-                                    ? ((1 - parseFloat(discount)) * 100).toFixed(1)
+                                    ? (
+                                        (1 - parseFloat(discount)) *
+                                        100
+                                      ).toFixed(1)
                                     : (discount * 10).toFixed(1)}
                                   {t('折')}
                                 </Tag>

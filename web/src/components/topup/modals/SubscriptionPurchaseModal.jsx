@@ -37,6 +37,7 @@ import {
   formatSubscriptionDuration,
   formatSubscriptionResetPeriod,
 } from '../../../helpers/subscriptionFormat';
+import { SiAlipay, SiWechat } from 'react-icons/si';
 
 const { Text } = Typography;
 
@@ -49,6 +50,7 @@ const SubscriptionPurchaseModal = ({
   selectedEpayMethod,
   setSelectedEpayMethod,
   epayMethods = [],
+  directMethods = [],
   enableOnlineTopUp = false,
   enableStripeTopUp = false,
   enableCreemTopUp = false,
@@ -56,6 +58,7 @@ const SubscriptionPurchaseModal = ({
   onPayStripe,
   onPayCreem,
   onPayEpay,
+  onPayDirect,
 }) => {
   const plan = selectedPlan?.plan;
   const totalAmount = Number(plan?.total_amount || 0);
@@ -69,7 +72,8 @@ const SubscriptionPurchaseModal = ({
   const hasStripe = enableStripeTopUp && !!plan?.stripe_price_id;
   const hasCreem = enableCreemTopUp && !!plan?.creem_product_id;
   const hasEpay = enableOnlineTopUp && epayMethods.length > 0;
-  const hasAnyPayment = hasStripe || hasCreem || hasEpay;
+  const hasDirect = directMethods.length > 0;
+  const hasAnyPayment = hasStripe || hasCreem || hasEpay || hasDirect;
   const purchaseLimit = Number(purchaseLimitInfo?.limit || 0);
   const purchaseCount = Number(purchaseLimitInfo?.count || 0);
   const purchaseLimitReached =
@@ -212,6 +216,30 @@ const SubscriptionPurchaseModal = ({
                       Creem
                     </Button>
                   )}
+                </div>
+              )}
+
+              {hasDirect && (
+                <div className='flex gap-2 flex-wrap'>
+                  {directMethods.map((method) => (
+                    <Button
+                      key={method.type}
+                      theme='light'
+                      className='flex-1'
+                      icon={
+                        method.type === 'alipay_direct' ? (
+                          <SiAlipay size={14} color='#1677FF' />
+                        ) : (
+                          <SiWechat size={14} color='#07C160' />
+                        )
+                      }
+                      onClick={() => onPayDirect?.(method.type)}
+                      loading={paying}
+                      disabled={purchaseLimitReached}
+                    >
+                      {method.name}
+                    </Button>
+                  ))}
                 </div>
               )}
 

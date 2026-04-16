@@ -39,6 +39,7 @@ import InvitationCard from './InvitationCard';
 import TransferModal from './modals/TransferModal';
 import PaymentConfirmModal from './modals/PaymentConfirmModal';
 import TopupHistoryModal from './modals/TopupHistoryModal';
+import PaymentQRCodeModal from './modals/PaymentQRCodeModal';
 
 const TopUp = () => {
   const { t } = useTranslation();
@@ -63,6 +64,8 @@ const TopUp = () => {
   const [enableStripeTopUp, setEnableStripeTopUp] = useState(
     statusState?.status?.enable_stripe_topup || false,
   );
+  const [enableAlipayDirectTopUp, setEnableAlipayDirectTopUp] = useState(false);
+  const [enableWechatDirectTopUp, setEnableWechatDirectTopUp] = useState(false);
   const [statusLoading, setStatusLoading] = useState(true);
 
   // Creem 相关状态
@@ -83,6 +86,12 @@ const TopUp = () => {
   const [paymentLoading, setPaymentLoading] = useState(false);
   const [confirmLoading, setConfirmLoading] = useState(false);
   const [payMethods, setPayMethods] = useState([]);
+  const [qrPaymentState, setQrPaymentState] = useState({
+    visible: false,
+    qrCodeUrl: '',
+    tradeNo: '',
+    paymentMethod: '',
+  });
 
   const affFetchedRef = useRef(false);
 
@@ -156,10 +165,60 @@ const TopUp = () => {
     window.open(topUpLink, '_blank');
   };
 
+  const getClientScene = () => {
+    if (typeof window === 'undefined') {
+      return 'pc';
+    }
+    const ua = window.navigator?.userAgent || '';
+    return /Android|iPhone|iPad|iPod|Mobile/i.test(ua) ? 'mobile' : 'pc';
+  };
+
+  const getPayMethodName = (type) => {
+    const matched = payMethods.find((method) => method.type === type);
+    return matched?.name || type;
+  };
+
+  const handleQrPaymentCancel = () => {
+    setQrPaymentState({
+      visible: false,
+      qrCodeUrl: '',
+      tradeNo: '',
+      paymentMethod: '',
+    });
+  };
+
+  const handleDirectPaymentResponse = (payload, paymentMethod) => {
+    if (payload?.action === 'redirect' && payload?.redirect_url) {
+      window.location.href = payload.redirect_url;
+      return;
+    }
+    if (payload?.action === 'qr' && payload?.qr_code_url) {
+      setQrPaymentState({
+        visible: true,
+        qrCodeUrl: payload.qr_code_url,
+        tradeNo: payload.trade_no,
+        paymentMethod,
+      });
+      showSuccess(t('已发起支付，请扫码完成'));
+      return;
+    }
+    showError(t('支付响应格式错误'));
+  };
+
   const preTopUp = async (payment) => {
     if (payment === 'stripe') {
       if (!enableStripeTopUp) {
         showError(t('管理员未开启Stripe充值！'));
+        return;
+      }
+    } else if (payment === 'alipay_direct') {
+      if (!enableAlipayDirectTopUp) {
+        showError(t('管理员未开启支付宝官方支付！'));
+        return;
+      }
+    } else if (payment === 'wechat_direct') {
+      if (!enableWechatDirectTopUp) {
+        showError(t('管理员未开启微信支付官方支付！'));
         return;
       }
     } else {
@@ -216,6 +275,16 @@ const TopUp = () => {
           amount: parseInt(topUpCount),
           payment_method: 'stripe',
         });
+      } else if (payWay === 'alipay_direct') {
+        res = await API.post('/api/user/alipay/pay', {
+          amount: parseInt(topUpCount),
+          client_scene: getClientScene(),
+        });
+      } else if (payWay === 'wechat_direct') {
+        res = await API.post('/api/user/wechat/pay', {
+          amount: parseInt(topUpCount),
+          client_scene: getClientScene(),
+        });
       } else {
         // 普通支付请求
         res = await API.post('/api/user/pay', {
@@ -230,6 +299,8 @@ const TopUp = () => {
           if (payWay === 'stripe') {
             // Stripe 支付回调处理
             window.open(data.pay_link, '_blank');
+          } else if (payWay === 'alipay_direct' || payWay === 'wechat_direct') {
+            handleDirectPaymentResponse(data, payWay);
           } else {
             // 普通支付表单提交
             let params = data;
@@ -317,32 +388,32 @@ const TopUp = () => {
 
   const waffoTopUp = async (payMethodIndex) => {
     try {
-        if (topUpCount < waffoMinTopUp) {
-            showError(t('充值数量不能小于') + waffoMinTopUp);
-            return;
-        }
-        setPaymentLoading(true);
-        const requestBody = {
-            amount: parseInt(topUpCount),
-        };
-        if (payMethodIndex != null) {
-            requestBody.pay_method_index = payMethodIndex;
-        }
-        const res = await API.post('/api/user/waffo/pay', requestBody);
-        if (res !== undefined) {
-            const { message, data } = res.data;
-            if (message === 'success' && data?.payment_url) {
-                window.open(data.payment_url, '_blank');
-            } else {
-                showError(data || t('支付请求失败'));
-            }
+      if (topUpCount < waffoMinTopUp) {
+        showError(t('充值数量不能小于') + waffoMinTopUp);
+        return;
+      }
+      setPaymentLoading(true);
+      const requestBody = {
+        amount: parseInt(topUpCount),
+      };
+      if (payMethodIndex != null) {
+        requestBody.pay_method_index = payMethodIndex;
+      }
+      const res = await API.post('/api/user/waffo/pay', requestBody);
+      if (res !== undefined) {
+        const { message, data } = res.data;
+        if (message === 'success' && data?.payment_url) {
+          window.open(data.payment_url, '_blank');
         } else {
-            showError(res);
+          showError(data || t('支付请求失败'));
         }
+      } else {
+        showError(res);
+      }
     } catch (e) {
-        showError(t('支付请求失败'));
+      showError(t('支付请求失败'));
     } finally {
-        setPaymentLoading(false);
+      setPaymentLoading(false);
     }
   };
 
@@ -462,6 +533,10 @@ const TopUp = () => {
                   method.color = 'rgba(var(--semi-blue-5), 1)';
                 } else if (method.type === 'wxpay') {
                   method.color = 'rgba(var(--semi-green-5), 1)';
+                } else if (method.type === 'alipay_direct') {
+                  method.color = 'rgba(var(--semi-blue-5), 1)';
+                } else if (method.type === 'wechat_direct') {
+                  method.color = 'rgba(var(--semi-green-5), 1)';
                 } else if (method.type === 'stripe') {
                   method.color = 'rgba(var(--semi-purple-5), 1)';
                 } else {
@@ -480,16 +555,25 @@ const TopUp = () => {
           setPayMethods(payMethods);
           const enableStripeTopUp = data.enable_stripe_topup || false;
           const enableOnlineTopUp = data.enable_online_topup || false;
+          const enableAlipayDirectTopUp =
+            data.enable_alipay_direct_topup || false;
+          const enableWechatDirectTopUp =
+            data.enable_wechat_direct_topup || false;
           const enableCreemTopUp = data.enable_creem_topup || false;
-          const minTopUpValue = enableOnlineTopUp
-            ? data.min_topup
-            : enableStripeTopUp
-              ? data.stripe_min_topup
-              : data.enable_waffo_topup
-                ? data.waffo_min_topup
-                : 1;
+          const minTopUpValue =
+            enableOnlineTopUp ||
+            enableAlipayDirectTopUp ||
+            enableWechatDirectTopUp
+              ? data.min_topup
+              : enableStripeTopUp
+                ? data.stripe_min_topup
+                : data.enable_waffo_topup
+                  ? data.waffo_min_topup
+                  : 1;
           setEnableOnlineTopUp(enableOnlineTopUp);
           setEnableStripeTopUp(enableStripeTopUp);
+          setEnableAlipayDirectTopUp(enableAlipayDirectTopUp);
+          setEnableWechatDirectTopUp(enableWechatDirectTopUp);
           setEnableCreemTopUp(enableCreemTopUp);
           const enableWaffoTopUp = data.enable_waffo_topup || false;
           setEnableWaffoTopUp(enableWaffoTopUp);
@@ -712,6 +796,37 @@ const TopUp = () => {
     }));
   };
 
+  useEffect(() => {
+    if (!qrPaymentState.visible || !qrPaymentState.tradeNo) {
+      return undefined;
+    }
+
+    const timer = setInterval(async () => {
+      try {
+        const res = await API.get('/api/user/topup/status', {
+          params: { trade_no: qrPaymentState.tradeNo },
+        });
+        if (!res.data?.success) {
+          return;
+        }
+        const status = res.data?.data?.status;
+        if (status === 'success') {
+          handleQrPaymentCancel();
+          await getUserQuota();
+          showSuccess(t('支付成功'));
+          setOpenHistory(true);
+        } else if (status === 'failed' || status === 'expired') {
+          handleQrPaymentCancel();
+          showError(t('支付失败'));
+        }
+      } catch (error) {
+        // ignore polling errors
+      }
+    }, 3000);
+
+    return () => clearInterval(timer);
+  }, [qrPaymentState.visible, qrPaymentState.tradeNo]);
+
   return (
     <div className='w-full max-w-7xl mx-auto relative min-h-screen lg:min-h-0 mt-[60px] px-2'>
       {/* 划转模态框 */}
@@ -751,6 +866,15 @@ const TopUp = () => {
         t={t}
       />
 
+      <PaymentQRCodeModal
+        visible={qrPaymentState.visible}
+        onCancel={handleQrPaymentCancel}
+        t={t}
+        qrCodeUrl={qrPaymentState.qrCodeUrl}
+        tradeNo={qrPaymentState.tradeNo}
+        paymentMethodName={getPayMethodName(qrPaymentState.paymentMethod)}
+      />
+
       {/* Creem 充值确认模态框 */}
       <Modal
         title={t('确定要充值 $')}
@@ -785,6 +909,8 @@ const TopUp = () => {
           t={t}
           enableOnlineTopUp={enableOnlineTopUp}
           enableStripeTopUp={enableStripeTopUp}
+          enableAlipayDirectTopUp={enableAlipayDirectTopUp}
+          enableWechatDirectTopUp={enableWechatDirectTopUp}
           enableCreemTopUp={enableCreemTopUp}
           creemProducts={creemProducts}
           creemPreTopUp={creemPreTopUp}

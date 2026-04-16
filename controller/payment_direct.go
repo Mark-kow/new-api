@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"fmt"
 	"io"
 	"net/http"
 	"strconv"
@@ -110,7 +111,7 @@ func createTopUpDirectOrder(c *gin.Context, paymentMethod string, provider strin
 	case "wechat":
 		result, err = (&service.WechatPayService{}).CreatePayment(directReq)
 	default:
-		err = gin.Error{}
+		err = fmt.Errorf("unsupported provider")
 	}
 	if err != nil {
 		topUp.Status = common.TopUpStatusFailed
@@ -186,7 +187,7 @@ func createSubscriptionDirectOrder(c *gin.Context, paymentMethod string, provide
 	case "wechat":
 		result, err = (&service.WechatPayService{}).CreatePayment(directReq)
 	default:
-		err = gin.Error{}
+		err = fmt.Errorf("unsupported provider")
 	}
 	if err != nil {
 		_ = model.ExpireSubscriptionOrder(tradeNo)
@@ -194,7 +195,7 @@ func createSubscriptionDirectOrder(c *gin.Context, paymentMethod string, provide
 		return
 	}
 
-	common.ApiSuccess(c, buildDirectPaymentResponse(result))
+	c.JSON(http.StatusOK, gin.H{"message": "success", "data": buildDirectPaymentResponse(result)})
 }
 
 func finalizeDirectPayment(notification *service.DirectPaymentNotification, paymentMethod string) error {
@@ -209,7 +210,7 @@ func finalizeDirectPayment(notification *service.DirectPaymentNotification, paym
 			return model.ErrPaymentMethodMismatch
 		}
 		if !service.PaymentMoneyMatches(topUp.Money, notification.Money) {
-			return gin.Error{Err: io.EOF}
+			return fmt.Errorf("payment amount mismatch")
 		}
 		return model.RechargeDirect(notification.TradeNo, paymentMethod, notification.ProviderTradeNo, notification.RawPayload)
 	}
@@ -219,11 +220,11 @@ func finalizeDirectPayment(notification *service.DirectPaymentNotification, paym
 			return model.ErrPaymentMethodMismatch
 		}
 		if !service.PaymentMoneyMatches(order.Money, notification.Money) {
-			return gin.Error{Err: io.EOF}
+			return fmt.Errorf("payment amount mismatch")
 		}
 		return model.CompleteSubscriptionOrderWithProvider(notification.TradeNo, notification.ProviderTradeNo, notification.RawPayload)
 	}
-	return nil
+	return fmt.Errorf("payment order not found")
 }
 
 func RequestAlipayDirectPay(c *gin.Context) {
@@ -320,11 +321,14 @@ func WechatNotify(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"code": "SUCCESS", "message": "成功"})
 		return
 	}
-	if paymentMethod, finalizeErr := detectWechatPaymentMethod(notification.TradeNo); finalizeErr == nil {
-		if err := finalizeDirectPayment(notification, paymentMethod); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"code": "FAIL", "message": "处理失败"})
-			return
-		}
+	paymentMethod, finalizeErr := detectWechatPaymentMethod(notification.TradeNo)
+	if finalizeErr != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"code": "FAIL", "message": "订单不存在"})
+		return
+	}
+	if err := finalizeDirectPayment(notification, paymentMethod); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"code": "FAIL", "message": "处理失败"})
+		return
 	}
 	c.JSON(http.StatusOK, gin.H{"code": "SUCCESS", "message": "成功"})
 }

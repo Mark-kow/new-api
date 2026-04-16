@@ -54,6 +54,8 @@ const PAYMENT_METHOD_MAP = {
   waffo: 'Waffo',
   alipay: '支付宝',
   wxpay: '微信',
+  alipay_direct: '支付宝官方',
+  wechat_direct: '微信支付官方',
 };
 
 const TopupHistoryModal = ({ visible, onCancel, t }) => {
@@ -217,14 +219,14 @@ const TopupHistoryModal = ({ visible, onCancel, t }) => {
           if (record.status === 'pending') {
             actions.push(
               <Button
-                key="complete"
+                key='complete'
                 size='small'
                 type='primary'
                 theme='outline'
                 onClick={() => confirmAdminComplete(record.trade_no)}
               >
                 {t('补单')}
-              </Button>
+              </Button>,
             );
           }
           return actions.length > 0 ? <>{actions}</> : null;
