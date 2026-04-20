@@ -289,7 +289,12 @@ const renderOperations = (
         {t('降级')}
       </Button>
       <Dropdown menu={moreMenu} trigger='click' position='bottomRight'>
-        <Button type='tertiary' size='small' icon={<IconMore />} />
+        <Button
+          type='tertiary'
+          size='small'
+          icon={<IconMore />}
+          aria-label={t('更多')}
+        />
       </Dropdown>
     </Space>
   );

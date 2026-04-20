@@ -865,7 +865,12 @@ export const getChannelsColumns = ({
                 position='bottomRight'
                 menu={moreMenuItems}
               >
-                <Button icon={<IconMore />} type='tertiary' size='small' />
+                <Button
+                  icon={<IconMore />}
+                  type='tertiary'
+                  size='small'
+                  aria-label={t('更多')}
+                />
               </Dropdown>
             </Space>
           );
