@@ -71,4 +71,4 @@ const ActionButtons = ({
   );
 };
 
-export default ActionButtons;
+export default React.memo(ActionButtons);

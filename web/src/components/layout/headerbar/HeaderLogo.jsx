@@ -78,4 +78,4 @@ const HeaderLogo = ({
   );
 };
 
-export default HeaderLogo;
+export default React.memo(HeaderLogo);

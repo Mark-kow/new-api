@@ -83,4 +83,4 @@ const LanguageSelector = ({ currentLang, onLanguageChange, t }) => {
   );
 };
 
-export default LanguageSelector;
+export default React.memo(LanguageSelector);
