@@ -689,6 +689,7 @@ export const getDeploymentsColumns = ({
                   type='tertiary'
                   icon={<IconMore />}
                   className='px-1'
+                  aria-label={t('更多操作')}
                 />
               </Dropdown>
             )}

@@ -844,6 +844,7 @@ export const getChannelsColumns = ({
                       type='tertiary'
                       size='small'
                       icon={<IconTreeTriangleDown />}
+                      aria-label={t('展开选项')}
                     />
                   </Dropdown>
                 </SplitButtonGroup>
@@ -865,7 +866,12 @@ export const getChannelsColumns = ({
                 position='bottomRight'
                 menu={moreMenuItems}
               >
-                <Button icon={<IconMore />} type='tertiary' size='small' />
+                <Button
+                  icon={<IconMore />}
+                  type='tertiary'
+                  size='small'
+                  aria-label={t('更多操作')}
+                />
               </Dropdown>
             </Space>
           );

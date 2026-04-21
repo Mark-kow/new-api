@@ -212,7 +212,12 @@ export const getRedemptionsColumns = ({
               position='bottomRight'
               menu={moreMenuItems}
             >
-              <Button type='tertiary' size='small' icon={<IconMore />} />
+              <Button
+                type='tertiary'
+                size='small'
+                icon={<IconMore />}
+                aria-label={t('更多操作')}
+              />
             </Dropdown>
           </Space>
         );
