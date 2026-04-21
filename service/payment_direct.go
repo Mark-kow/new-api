@@ -17,6 +17,7 @@ import (
 	"net/http"
 	"net/url"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -98,10 +99,12 @@ func randomNonce(length int) string {
 	return string(buf)
 }
 
+// sortedSignContent 将参数按 key 字典序拼接为待签名字符串。
+// 根据支付宝官方规范，排除 sign 和 sign_type 参数。
 func sortedSignContent(params map[string]string) string {
 	keys := make([]string, 0, len(params))
 	for key, value := range params {
-		if value == "" || key == "sign" {
+		if value == "" || key == "sign" || key == "sign_type" {
 			continue
 		}
 		keys = append(keys, key)
@@ -388,6 +391,7 @@ func (s *AlipayService) createWapPayment(req *DirectPaymentRequest) (*DirectPaym
 	}, nil
 }
 
+// VerifyCallback 验证支付宝回调签名并解析通知数据
 func (s *AlipayService) VerifyCallback(params map[string]string) (*DirectPaymentNotification, error) {
 	signature := strings.TrimSpace(params["sign"])
 	if signature == "" {
@@ -397,9 +401,14 @@ func (s *AlipayService) VerifyCallback(params map[string]string) (*DirectPayment
 	if err := verifyRSA256(content, signature, setting.AlipayPublicKey); err != nil {
 		return nil, err
 	}
+	// 使用 strconv.ParseFloat 替代 fmt.Sscanf，避免解析失败时静默返回 0
 	amount := 0.0
 	if total := strings.TrimSpace(params["total_amount"]); total != "" {
-		fmt.Sscanf(total, "%f", &amount)
+		var err error
+		amount, err = strconv.ParseFloat(total, 64)
+		if err != nil {
+			return nil, fmt.Errorf("invalid total_amount: %s", total)
+		}
 	}
 	raw, _ := common.Marshal(params)
 	return &DirectPaymentNotification{

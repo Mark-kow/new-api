@@ -801,7 +801,17 @@ const TopUp = () => {
       return undefined;
     }
 
+    // 轮询最长持续 15 分钟（与后端支付订单过期时间一致），防止无限轮询
+    const QR_POLL_TIMEOUT_MS = 15 * 60 * 1000;
+    const startTime = Date.now();
+
     const timer = setInterval(async () => {
+      // 超时自动取消轮询
+      if (Date.now() - startTime > QR_POLL_TIMEOUT_MS) {
+        handleQrPaymentCancel();
+        showError(t('支付超时，请重新发起'));
+        return;
+      }
       try {
         const res = await API.get('/api/user/topup/status', {
           params: { trade_no: qrPaymentState.tradeNo },

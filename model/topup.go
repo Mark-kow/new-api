@@ -493,7 +493,12 @@ func RechargeDirect(tradeNo string, paymentMethod string, providerTradeNo string
 	}
 
 	err = DB.Transaction(func(tx *gorm.DB) error {
-		err := tx.Set("gorm:query_option", "FOR UPDATE").Where(refCol+" = ?", tradeNo).First(topUp).Error
+		// 行级锁防并发：SQLite 不支持 FOR UPDATE（依赖其数据库级排他锁）
+		query := tx.Where(refCol+" = ?", tradeNo)
+		if !common.UsingSQLite {
+			query = query.Set("gorm:query_option", "FOR UPDATE")
+		}
+		err := query.First(topUp).Error
 		if err != nil {
 			return errors.New("充值订单不存在")
 		}

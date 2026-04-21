@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -21,7 +22,13 @@ import (
 const (
 	PaymentMethodAlipayDirect = "alipay_direct"
 	PaymentMethodWechatDirect = "wechat_direct"
+
+	// wechatNotifyMaxBodySize 微信支付回调请求体最大限制（1MB），防止恶意超大请求导致 DoS
+	wechatNotifyMaxBodySize = 1 << 20
 )
+
+// ErrOrderNotFound 订单不存在时的统一错误
+var ErrOrderNotFound = errors.New("payment order not found")
 
 type DirectTopUpPayRequest struct {
 	Amount      int64  `json:"amount"`
@@ -285,6 +292,9 @@ func AlipayNotify(c *gin.Context) {
 	_, _ = c.Writer.Write([]byte("success"))
 }
 
+// AlipayReturn 处理支付宝同步跳转回调。
+// 注意：此端点仅用于用户体验跳转，不执行订单完成逻辑。
+// 订单完成统一由异步通知 (AlipayNotify) 处理，避免同步 return URL 参数被篡改的风险。
 func AlipayReturn(c *gin.Context) {
 	params := make(map[string]string, len(c.Request.URL.Query()))
 	for key := range c.Request.URL.Query() {
@@ -295,11 +305,8 @@ func AlipayReturn(c *gin.Context) {
 		c.Redirect(http.StatusFound, system_setting.ServerAddress+"/console/topup?pay=fail")
 		return
 	}
+	// 仅根据验签后的状态做页面展示跳转，不做 finalizeDirectPayment
 	if notification.Status == "TRADE_SUCCESS" || notification.Status == "TRADE_FINISHED" {
-		if err := finalizeDirectPayment(notification, PaymentMethodAlipayDirect); err != nil {
-			c.Redirect(http.StatusFound, system_setting.ServerAddress+"/console/topup?pay=fail")
-			return
-		}
 		c.Redirect(http.StatusFound, system_setting.ServerAddress+"/console/topup?pay=success&show_history=true")
 		return
 	}
@@ -307,7 +314,8 @@ func AlipayReturn(c *gin.Context) {
 }
 
 func WechatNotify(c *gin.Context) {
-	bodyBytes, err := io.ReadAll(c.Request.Body)
+	// 限制请求体大小，防止恶意超大请求导致内存耗尽
+	bodyBytes, err := io.ReadAll(io.LimitReader(c.Request.Body, wechatNotifyMaxBodySize))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"code": "FAIL", "message": "读取回调失败"})
 		return
@@ -333,6 +341,7 @@ func WechatNotify(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"code": "SUCCESS", "message": "成功"})
 }
 
+// detectWechatPaymentMethod 根据订单号从充值订单或订阅订单中查找支付方式
 func detectWechatPaymentMethod(tradeNo string) (string, error) {
 	if topUp := model.GetTopUpByTradeNo(tradeNo); topUp != nil {
 		return topUp.PaymentMethod, nil
@@ -340,7 +349,7 @@ func detectWechatPaymentMethod(tradeNo string) (string, error) {
 	if order := model.GetSubscriptionOrderByTradeNo(tradeNo); order != nil {
 		return order.PaymentMethod, nil
 	}
-	return "", io.EOF
+	return "", ErrOrderNotFound
 }
 
 func GetTopUpStatus(c *gin.Context) {
