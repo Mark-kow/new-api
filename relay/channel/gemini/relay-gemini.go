@@ -923,7 +923,14 @@ func removeAdditionalPropertiesWithDepth(schema interface{}, depth int) interfac
 }
 
 func unescapeString(s string) (string, error) {
-	var result []rune
+	// ⚡ Bolt: Fast path for strings without any escapes
+	if !strings.ContainsRune(s, '\\') {
+		return s, nil
+	}
+
+	// ⚡ Bolt: Use strings.Builder for optimal string concatenation
+	var builder strings.Builder
+	builder.Grow(len(s))
 	escaped := false
 	i := 0
 
@@ -937,39 +944,40 @@ func unescapeString(s string) (string, error) {
 			// 如果是转义符后的字符，检查其类型
 			switch r {
 			case '"':
-				result = append(result, '"')
+				builder.WriteRune('"')
 			case '\\':
-				result = append(result, '\\')
+				builder.WriteRune('\\')
 			case '/':
-				result = append(result, '/')
+				builder.WriteRune('/')
 			case 'b':
-				result = append(result, '\b')
+				builder.WriteRune('\b')
 			case 'f':
-				result = append(result, '\f')
+				builder.WriteRune('\f')
 			case 'n':
-				result = append(result, '\n')
+				builder.WriteRune('\n')
 			case 'r':
-				result = append(result, '\r')
+				builder.WriteRune('\r')
 			case 't':
-				result = append(result, '\t')
+				builder.WriteRune('\t')
 			case '\'':
-				result = append(result, '\'')
+				builder.WriteRune('\'')
 			default:
 				// 如果遇到一个非法的转义字符，直接按原样输出
-				result = append(result, '\\', r)
+				builder.WriteRune('\\')
+				builder.WriteRune(r)
 			}
 			escaped = false
 		} else {
 			if r == '\\' {
 				escaped = true // 记录反斜杠作为转义符
 			} else {
-				result = append(result, r)
+				builder.WriteRune(r)
 			}
 		}
 		i += size // 移动到下一个字符
 	}
 
-	return string(result), nil
+	return builder.String(), nil
 }
 func unescapeMapOrSlice(data interface{}) interface{} {
 	switch v := data.(type) {
