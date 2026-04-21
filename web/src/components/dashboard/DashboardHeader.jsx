@@ -18,8 +18,9 @@ For commercial licensing, please contact support@quantumnous.com
 */
 
 import React from 'react';
-import { Button } from '@douyinfe/semi-ui';
+import { Button, Tooltip } from '@douyinfe/semi-ui';
 import { RefreshCw, Search } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 const DashboardHeader = ({
   getGreeting,
@@ -27,8 +28,8 @@ const DashboardHeader = ({
   showSearchModal,
   refresh,
   loading,
-  t,
 }) => {
+  const { t } = useTranslation();
   const ICON_BUTTON_CLASS = 'text-white hover:bg-opacity-80 !rounded-full';
 
   return (
@@ -40,19 +41,25 @@ const DashboardHeader = ({
         {getGreeting}
       </h2>
       <div className='flex gap-3'>
-        <Button
-          type='tertiary'
-          icon={<Search size={16} />}
-          onClick={showSearchModal}
-          className={`bg-green-500 hover:bg-green-600 ${ICON_BUTTON_CLASS}`}
-        />
-        <Button
-          type='tertiary'
-          icon={<RefreshCw size={16} />}
-          onClick={refresh}
-          loading={loading}
-          className={`bg-blue-500 hover:bg-blue-600 ${ICON_BUTTON_CLASS}`}
-        />
+        <Tooltip content={t('搜索')}>
+          <Button
+            type='tertiary'
+            icon={<Search size={16} />}
+            onClick={showSearchModal}
+            className={`bg-green-500 hover:bg-green-600 ${ICON_BUTTON_CLASS}`}
+            aria-label={t('搜索')}
+          />
+        </Tooltip>
+        <Tooltip content={t('刷新')}>
+          <Button
+            type='tertiary'
+            icon={<RefreshCw size={16} />}
+            onClick={refresh}
+            loading={loading}
+            className={`bg-blue-500 hover:bg-blue-600 ${ICON_BUTTON_CLASS}`}
+            aria-label={t('刷新')}
+          />
+        </Tooltip>
       </div>
     </div>
   );
