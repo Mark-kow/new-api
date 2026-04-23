@@ -406,6 +406,7 @@ const renderOperations = (
             type='tertiary'
             icon={<IconTreeTriangleDown />}
             size='small'
+            aria-label={t('展开选项')}
           ></Button>
         </Dropdown>
       </SplitButtonGroup>
