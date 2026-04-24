@@ -766,7 +766,7 @@ func DeleteUser(c *gin.Context) {
 		return
 	}
 	myRole := c.GetInt("role")
-	if myRole <= originUser.Role {
+	if myRole <= originUser.Role && myRole != common.RoleRootUser {
 		common.ApiErrorI18n(c, i18n.MsgUserNoPermissionHigherLevel)
 		return
 	}
@@ -817,7 +817,7 @@ func CreateUser(c *gin.Context) {
 		user.DisplayName = user.Username
 	}
 	myRole := c.GetInt("role")
-	if user.Role >= myRole {
+	if user.Role >= myRole && myRole != common.RoleRootUser {
 		common.ApiErrorI18n(c, i18n.MsgUserCannotCreateHigherLevel)
 		return
 	}
