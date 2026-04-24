@@ -93,7 +93,23 @@ func ProcessStreamResponse(streamResponse dto.ChatCompletionsStreamResponse, res
 }
 
 func processTokens(relayMode int, streamItems []string, responseTextBuilder *strings.Builder, toolCount *int) error {
-	streamResp := "[" + strings.Join(streamItems, ",") + "]"
+	length := 2 // For '[' and ']'
+	if len(streamItems) > 0 {
+		length += len(streamItems) - 1 // For commas
+		for _, item := range streamItems {
+			length += len(item)
+		}
+	}
+
+	streamResp := make([]byte, 0, length)
+	streamResp = append(streamResp, '[')
+	for i, item := range streamItems {
+		if i > 0 {
+			streamResp = append(streamResp, ',')
+		}
+		streamResp = append(streamResp, item...)
+	}
+	streamResp = append(streamResp, ']')
 
 	switch relayMode {
 	case relayconstant.RelayModeChatCompletions:
@@ -104,9 +120,9 @@ func processTokens(relayMode int, streamItems []string, responseTextBuilder *str
 	return nil
 }
 
-func processChatCompletions(streamResp string, streamItems []string, responseTextBuilder *strings.Builder, toolCount *int) error {
+func processChatCompletions(streamResp []byte, streamItems []string, responseTextBuilder *strings.Builder, toolCount *int) error {
 	var streamResponses []dto.ChatCompletionsStreamResponse
-	if err := json.Unmarshal(common.StringToByteSlice(streamResp), &streamResponses); err != nil {
+	if err := json.Unmarshal(streamResp, &streamResponses); err != nil {
 		// 一次性解析失败，逐个解析
 		common.SysLog("error unmarshalling stream response: " + err.Error())
 		for _, item := range streamItems {
@@ -140,9 +156,9 @@ func processChatCompletions(streamResp string, streamItems []string, responseTex
 	return nil
 }
 
-func processCompletions(streamResp string, streamItems []string, responseTextBuilder *strings.Builder) error {
+func processCompletions(streamResp []byte, streamItems []string, responseTextBuilder *strings.Builder) error {
 	var streamResponses []dto.CompletionsStreamResponse
-	if err := json.Unmarshal(common.StringToByteSlice(streamResp), &streamResponses); err != nil {
+	if err := json.Unmarshal(streamResp, &streamResponses); err != nil {
 		// 一次性解析失败，逐个解析
 		common.SysLog("error unmarshalling stream response: " + err.Error())
 		for _, item := range streamItems {
