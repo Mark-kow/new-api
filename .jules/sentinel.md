@@ -1,0 +1,4 @@
+## 2026-04-24 - [Sentinel] Fix IDOR/Authorization Bypass for Root User
+**Vulnerability:** The Role-Based Access Control (RBAC) system in `controller/user.go` strictly prevented users from modifying other users of equal or higher privilege levels (`user.Role >= myRole`). This logic locked out the highest privileged root user (`common.RoleRootUser`) from managing (creating or deleting) other root users, creating an administrative gap and potential IDOR if an attacker manipulated role IDs.
+**Learning:** The new-api RBAC uses simple integer comparisons. Without an explicit bypass for the top-level role, strict role hierarchy checks inadvertently block peer-level administration at the root level.
+**Prevention:** When implementing tiered access control, always include a circuit breaker or explicit exception for the master/root role (e.g., `&& myRole != common.RoleRootUser`) to preserve supreme administrative capabilities.
