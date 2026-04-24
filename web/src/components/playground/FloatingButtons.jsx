@@ -20,6 +20,7 @@ For commercial licensing, please contact support@quantumnous.com
 import React from 'react';
 import { Button } from '@douyinfe/semi-ui';
 import { Settings, Eye, EyeOff } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 const FloatingButtons = ({
   styleState,
@@ -28,6 +29,8 @@ const FloatingButtons = ({
   onToggleSettings,
   onToggleDebugPanel,
 }) => {
+  const { t } = useTranslation();
+
   if (!styleState.isMobile) return null;
 
   return (
@@ -36,6 +39,7 @@ const FloatingButtons = ({
       {!showSettings && (
         <Button
           icon={<Settings size={18} />}
+          aria-label={t('设置')}
           style={{
             position: 'fixed',
             right: 16,
@@ -59,6 +63,7 @@ const FloatingButtons = ({
       {!showSettings && (
         <Button
           icon={showDebugPanel ? <EyeOff size={18} /> : <Eye size={18} />}
+          aria-label={showDebugPanel ? t('隐藏调试') : t('显示调试')}
           onClick={onToggleDebugPanel}
           theme='solid'
           type={showDebugPanel ? 'danger' : 'primary'}
