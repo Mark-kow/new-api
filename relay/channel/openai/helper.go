@@ -93,7 +93,25 @@ func ProcessStreamResponse(streamResponse dto.ChatCompletionsStreamResponse, res
 }
 
 func processTokens(relayMode int, streamItems []string, responseTextBuilder *strings.Builder, toolCount *int) error {
-	streamResp := "[" + strings.Join(streamItems, ",") + "]"
+	// Pre-allocate byte slice to prevent unnecessary string concatenations
+	// and intermediate allocations when constructing large JSON payloads.
+	capacity := 2
+	if len(streamItems) > 0 {
+		capacity += len(streamItems) - 1
+		for _, item := range streamItems {
+			capacity += len(item)
+		}
+	}
+
+	streamResp := make([]byte, 0, capacity)
+	streamResp = append(streamResp, '[')
+	for i, item := range streamItems {
+		if i > 0 {
+			streamResp = append(streamResp, ',')
+		}
+		streamResp = append(streamResp, item...)
+	}
+	streamResp = append(streamResp, ']')
 
 	switch relayMode {
 	case relayconstant.RelayModeChatCompletions:
@@ -104,9 +122,9 @@ func processTokens(relayMode int, streamItems []string, responseTextBuilder *str
 	return nil
 }
 
-func processChatCompletions(streamResp string, streamItems []string, responseTextBuilder *strings.Builder, toolCount *int) error {
+func processChatCompletions(streamResp []byte, streamItems []string, responseTextBuilder *strings.Builder, toolCount *int) error {
 	var streamResponses []dto.ChatCompletionsStreamResponse
-	if err := json.Unmarshal(common.StringToByteSlice(streamResp), &streamResponses); err != nil {
+	if err := json.Unmarshal(streamResp, &streamResponses); err != nil {
 		// 一次性解析失败，逐个解析
 		common.SysLog("error unmarshalling stream response: " + err.Error())
 		for _, item := range streamItems {
@@ -140,9 +158,9 @@ func processChatCompletions(streamResp string, streamItems []string, responseTex
 	return nil
 }
 
-func processCompletions(streamResp string, streamItems []string, responseTextBuilder *strings.Builder) error {
+func processCompletions(streamResp []byte, streamItems []string, responseTextBuilder *strings.Builder) error {
 	var streamResponses []dto.CompletionsStreamResponse
-	if err := json.Unmarshal(common.StringToByteSlice(streamResp), &streamResponses); err != nil {
+	if err := json.Unmarshal(streamResp, &streamResponses); err != nil {
 		// 一次性解析失败，逐个解析
 		common.SysLog("error unmarshalling stream response: " + err.Error())
 		for _, item := range streamItems {
