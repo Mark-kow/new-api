@@ -478,6 +478,7 @@ const JSONEditor = ({
               <Col span={2}>
                 <Button
                   icon={<IconDelete />}
+                  aria-label={t('删除')}
                   type='danger'
                   theme='borderless'
                   onClick={() => removeKeyValue(pair.id)}
@@ -586,6 +587,7 @@ const JSONEditor = ({
                   <Col span={2}>
                     <Button
                       icon={<IconDelete />}
+                      aria-label={t('删除')}
                       type='danger'
                       theme='borderless'
                       onClick={() => removeKeyValue(pair.id)}
