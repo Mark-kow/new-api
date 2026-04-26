@@ -93,7 +93,27 @@ func ProcessStreamResponse(streamResponse dto.ChatCompletionsStreamResponse, res
 }
 
 func processTokens(relayMode int, streamItems []string, responseTextBuilder *strings.Builder, toolCount *int) error {
-	streamResp := "[" + strings.Join(streamItems, ",") + "]"
+	// ⚡ Bolt: Optimize JSON array construction using strings.Builder with pre-allocation
+	// This prevents large intermediate string allocations that occur with strings.Join + concatenation.
+	var sb strings.Builder
+	length := 2 // For brackets '[' and ']'
+	for _, item := range streamItems {
+		length += len(item)
+	}
+	if len(streamItems) > 1 {
+		length += len(streamItems) - 1 // For commas
+	}
+	sb.Grow(length)
+
+	sb.WriteString("[")
+	for i, item := range streamItems {
+		if i > 0 {
+			sb.WriteString(",")
+		}
+		sb.WriteString(item)
+	}
+	sb.WriteString("]")
+	streamResp := sb.String()
 
 	switch relayMode {
 	case relayconstant.RelayModeChatCompletions:
