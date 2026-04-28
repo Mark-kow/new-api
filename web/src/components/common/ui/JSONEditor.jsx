@@ -482,6 +482,7 @@ const JSONEditor = ({
                   theme='borderless'
                   onClick={() => removeKeyValue(pair.id)}
                   style={{ width: '100%' }}
+                  aria-label={t('删除')}
                 />
               </Col>
             </Row>
@@ -590,6 +591,7 @@ const JSONEditor = ({
                       theme='borderless'
                       onClick={() => removeKeyValue(pair.id)}
                       style={{ width: '100%' }}
+                      aria-label={t('删除')}
                     />
                   </Col>
                 </Row>
