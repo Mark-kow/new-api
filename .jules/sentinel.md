@@ -1,0 +1,4 @@
+## 2024-05-18 - [Fix silent failure and missing root-user auth skip on user deletion]
+**Vulnerability:** A silent failure was found when a user is hard-deleted from `HardDeleteUserById(id)`. When an error is returned, `c.JSON` mistakenly replied with `success: true`. In addition, `myRole <= originUser.Role` was checking bounds during root users deletions without a `&& myRole != common.RoleRootUser` bypass, meaning root could not modify/delete other peer root accounts properly.
+**Learning:** Returning `success: true` on err paths in controllers creates false positive feedback. Missing `&& myRole != common.RoleRootUser` in origin/updated role checks can cause root lockout bugs.
+**Prevention:** Make sure `err != nil` branches return early with `common.ApiError(c, err)` rather than proceeding to `c.JSON({"success": true})`. When implementing role ceilings, append root user bypass.
