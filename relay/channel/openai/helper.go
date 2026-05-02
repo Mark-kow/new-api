@@ -93,20 +93,34 @@ func ProcessStreamResponse(streamResponse dto.ChatCompletionsStreamResponse, res
 }
 
 func processTokens(relayMode int, streamItems []string, responseTextBuilder *strings.Builder, toolCount *int) error {
-	streamResp := "[" + strings.Join(streamItems, ",") + "]"
+	// ⚡ Bolt: Pre-allocate capacity to avoid intermediate string allocations and copy overhead
+	capacity := 2 // For '[' and ']'
+	for _, item := range streamItems {
+		capacity += len(item) + 1 // +1 for ',' or just extra space
+	}
+
+	streamRespBytes := make([]byte, 0, capacity)
+	streamRespBytes = append(streamRespBytes, '[')
+	for i, item := range streamItems {
+		if i > 0 {
+			streamRespBytes = append(streamRespBytes, ',')
+		}
+		streamRespBytes = append(streamRespBytes, item...)
+	}
+	streamRespBytes = append(streamRespBytes, ']')
 
 	switch relayMode {
 	case relayconstant.RelayModeChatCompletions:
-		return processChatCompletions(streamResp, streamItems, responseTextBuilder, toolCount)
+		return processChatCompletions(streamRespBytes, streamItems, responseTextBuilder, toolCount)
 	case relayconstant.RelayModeCompletions:
-		return processCompletions(streamResp, streamItems, responseTextBuilder)
+		return processCompletions(streamRespBytes, streamItems, responseTextBuilder)
 	}
 	return nil
 }
 
-func processChatCompletions(streamResp string, streamItems []string, responseTextBuilder *strings.Builder, toolCount *int) error {
+func processChatCompletions(streamRespBytes []byte, streamItems []string, responseTextBuilder *strings.Builder, toolCount *int) error {
 	var streamResponses []dto.ChatCompletionsStreamResponse
-	if err := json.Unmarshal(common.StringToByteSlice(streamResp), &streamResponses); err != nil {
+	if err := json.Unmarshal(streamRespBytes, &streamResponses); err != nil {
 		// 一次性解析失败，逐个解析
 		common.SysLog("error unmarshalling stream response: " + err.Error())
 		for _, item := range streamItems {
@@ -140,9 +154,9 @@ func processChatCompletions(streamResp string, streamItems []string, responseTex
 	return nil
 }
 
-func processCompletions(streamResp string, streamItems []string, responseTextBuilder *strings.Builder) error {
+func processCompletions(streamRespBytes []byte, streamItems []string, responseTextBuilder *strings.Builder) error {
 	var streamResponses []dto.CompletionsStreamResponse
-	if err := json.Unmarshal(common.StringToByteSlice(streamResp), &streamResponses); err != nil {
+	if err := json.Unmarshal(streamRespBytes, &streamResponses); err != nil {
 		// 一次性解析失败，逐个解析
 		common.SysLog("error unmarshalling stream response: " + err.Error())
 		for _, item := range streamItems {
