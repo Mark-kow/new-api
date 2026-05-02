@@ -2695,6 +2695,7 @@ const ParamOverrideEditorModal = ({ visible, value, onSave, onCancel }) => {
                                                       type='danger'
                                                       theme='borderless'
                                                       icon={<IconDelete />}
+                                                      aria-label={t('删除')}
                                                       onClick={() =>
                                                         removePruneRule(
                                                           selectedOperation.id,
@@ -3145,6 +3146,7 @@ const ParamOverrideEditorModal = ({ visible, value, onSave, onCancel }) => {
                                               type='danger'
                                               icon={<IconDelete />}
                                               size='small'
+                                              aria-label={t('删除')}
                                               onClick={() =>
                                                 removeCondition(
                                                   selectedOperation.id,

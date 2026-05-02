@@ -480,6 +480,7 @@ const JSONEditor = ({
                   icon={<IconDelete />}
                   type='danger'
                   theme='borderless'
+                  aria-label={t('删除')}
                   onClick={() => removeKeyValue(pair.id)}
                   style={{ width: '100%' }}
                 />
@@ -588,6 +589,7 @@ const JSONEditor = ({
                       icon={<IconDelete />}
                       type='danger'
                       theme='borderless'
+                      aria-label={t('删除')}
                       onClick={() => removeKeyValue(pair.id)}
                       style={{ width: '100%' }}
                     />
