@@ -1,0 +1,5 @@
+
+## 2024-05-02 - Silent Failure Bug in User Deletion
+**Vulnerability:** A critical silent failure vulnerability existed in the `DeleteUser` function (`controller/user.go`) where it improperly returned an HTTP 200 `{"success": true}` response when the hard deletion database operation failed (`err != nil`). Furthermore, if the deletion actually succeeded (`err == nil`), it returned no response payload.
+**Learning:** Returning `{"success": true}` within `if err != nil` blocks obscures genuine backend errors and gives the frontend a false impression of success. This specific logic error allowed failed, high-priority actions (like hard deleting users) to go unnoticed and cause discrepancies between server state and client UX.
+**Prevention:** Always verify error handling code blocks carefully in Gin controllers to ensure errors properly route to `common.ApiError` (or equivalent), and only use successful JSON responses (`"success": true`) on the non-error path. Implement automated ast-level static analysis for instances of `"success": true` within `if err != nil` blocks.
