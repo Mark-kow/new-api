@@ -760,6 +760,7 @@ const OllamaModelModal = ({
                             type='danger'
                             size='small'
                             icon={<IconDelete />}
+                            aria-label={t('删除')}
                           />
                         </Popconfirm>
                       </div>
