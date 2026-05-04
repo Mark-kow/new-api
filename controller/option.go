@@ -66,11 +66,14 @@ func GetOptions(c *gin.Context) {
 	common.OptionMapRWMutex.Lock()
 	for k, v := range common.OptionMap {
 		value := common.Interface2String(v)
+		// Redact secrets and cryptographic material. Payment "public" keys and platform
+		// certs are still sensitive (verify callbacks / pin identity) and must not leak via API.
 		if strings.HasSuffix(k, "Token") ||
 			strings.HasSuffix(k, "Secret") ||
-			(strings.HasSuffix(k, "Key") && !strings.HasSuffix(k, "PublicKey")) ||
+			strings.HasSuffix(k, "Key") ||
 			strings.HasSuffix(k, "secret") ||
-			strings.HasSuffix(k, "api_key") {
+			strings.HasSuffix(k, "api_key") ||
+			strings.HasSuffix(k, "Cert") {
 			continue
 		}
 		options = append(options, &model.Option{
