@@ -787,6 +787,7 @@ export const getChannelsColumns = ({
                   {t('测试')}
                 </Button>
                 <Button
+                  aria-label={t('测试模型详情')}
                   size='small'
                   type='tertiary'
                   icon={<IconTreeTriangleDown />}
