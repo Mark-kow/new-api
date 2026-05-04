@@ -93,7 +93,27 @@ func ProcessStreamResponse(streamResponse dto.ChatCompletionsStreamResponse, res
 }
 
 func processTokens(relayMode int, streamItems []string, responseTextBuilder *strings.Builder, toolCount *int) error {
-	streamResp := "[" + strings.Join(streamItems, ",") + "]"
+	var streamResp string
+	if len(streamItems) == 0 {
+		streamResp = "[]"
+	} else {
+		capacity := 2 + len(streamItems) - 1 // '[' + ']' + commas
+		for _, item := range streamItems {
+			capacity += len(item)
+		}
+
+		var b strings.Builder
+		b.Grow(capacity)
+		b.WriteByte('[')
+		for i, item := range streamItems {
+			if i > 0 {
+				b.WriteByte(',')
+			}
+			b.WriteString(item)
+		}
+		b.WriteByte(']')
+		streamResp = b.String()
+	}
 
 	switch relayMode {
 	case relayconstant.RelayModeChatCompletions:
