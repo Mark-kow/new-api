@@ -99,6 +99,9 @@ const CardPro = ({
           <>
             <div className='w-full mb-2'>
               <Button
+                aria-label={
+                  showMobileActions ? t('隐藏操作项') : t('显示操作项')
+                }
                 onClick={toggleMobileActions}
                 icon={showMobileActions ? <IconEyeClosed /> : <IconEyeOpened />}
                 type='tertiary'

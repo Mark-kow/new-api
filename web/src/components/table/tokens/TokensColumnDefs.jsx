@@ -403,6 +403,7 @@ const renderOperations = (
         </Button>
         <Dropdown trigger='click' position='bottomRight' menu={chatsArray}>
           <Button
+            aria-label={t('展开聊天链接')}
             type='tertiary'
             icon={<IconTreeTriangleDown />}
             size='small'
