@@ -1,3 +1,3 @@
-## 2024-05-24 - Optimize unescapeString in relay-gemini.go
-**Learning:** In Go, string concatenation by repeatedly appending to a `[]rune` slice can be a bottleneck. Using `strings.Builder` with `builder.Grow()` pre-allocation is significantly faster and uses less memory.
-**Action:** When manipulating strings in performance-critical paths (like parsing JSON or handling escape sequences), favor `strings.Builder` and add fast-paths to skip processing when no modification is needed.
+## 2025-05-04 - JSON String Construction Optimization
+**Learning:** In hot relay processing paths, using `strings.Join` combined with `+` concatenation to construct JSON array strings causes multiple intermediate string allocations. Replacing this with `strings.Builder` and pre-calculating capacity via `Grow()` significantly reduces garbage collection pressure without sacrificing code readability. Manually constructing `[]byte` arrays, while faster, degrades readability and is considered an anti-pattern unless absolutely necessary.
+**Action:** When constructing dynamic JSON strings or large strings from slices, always favor `strings.Builder` with `Grow()` over naive string concatenation. Avoid overly complex byte slice manipulations unless the performance gains are strictly required and outweigh the loss of maintainability.
