@@ -27,6 +27,15 @@ var completionRatioMetaOptionKeys = []string{
 	"AudioCompletionRatio",
 }
 
+func isVisiblePublicKeyOption(key string) bool {
+	switch key {
+	case "WaffoPancakeWebhookPublicKey", "WaffoPancakeWebhookTestKey":
+		return true
+	default:
+		return false
+	}
+}
+
 func collectModelNamesFromOptionValue(raw string, modelNames map[string]struct{}) {
 	if strings.TrimSpace(raw) == "" {
 		return
@@ -66,14 +75,13 @@ func GetOptions(c *gin.Context) {
 	common.OptionMapRWMutex.Lock()
 	for k, v := range common.OptionMap {
 		value := common.Interface2String(v)
-		// Redact secrets and cryptographic material. Payment "public" keys and platform
-		// certs are still sensitive (verify callbacks / pin identity) and must not leak via API.
-		if strings.HasSuffix(k, "Token") ||
+		isSensitiveKey := strings.HasSuffix(k, "Token") ||
 			strings.HasSuffix(k, "Secret") ||
 			strings.HasSuffix(k, "Key") ||
 			strings.HasSuffix(k, "secret") ||
 			strings.HasSuffix(k, "api_key") ||
-			strings.HasSuffix(k, "Cert") {
+			strings.HasSuffix(k, "Cert")
+		if isSensitiveKey && !isVisiblePublicKeyOption(k) {
 			continue
 		}
 		options = append(options, &model.Option{
@@ -188,6 +196,14 @@ func UpdateOption(c *gin.Context) {
 			c.JSON(http.StatusOK, gin.H{
 				"success": false,
 				"message": "无法启用 Telegram OAuth，请先填入 Telegram Bot Token！",
+			})
+			return
+		}
+	case "theme.frontend":
+		if option.Value != "default" && option.Value != "classic" {
+			c.JSON(http.StatusOK, gin.H{
+				"success": false,
+				"message": "无效的主题值，可选值：default（新版前端）、classic（经典前端）",
 			})
 			return
 		}

@@ -197,7 +197,7 @@ func createSubscriptionDirectOrder(c *gin.Context, paymentMethod string, provide
 		err = fmt.Errorf("unsupported provider")
 	}
 	if err != nil {
-		_ = model.ExpireSubscriptionOrder(tradeNo)
+		_ = model.ExpireSubscriptionOrder(tradeNo, "")
 		common.ApiErrorMsg(c, "拉起支付失败: "+err.Error())
 		return
 	}
