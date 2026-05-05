@@ -1,0 +1,3 @@
+## 2024-05-05 - Visual loading feedback in dialogs
+**Learning:** Dialog action buttons often only use `disabled` states when loading, which can make users feel like the app is unresponsive or frozen, particularly for destructive actions that may take a few seconds to complete. Adding a visual `Loader2` spinner provides explicit feedback that their action was registered and is being processed.
+**Action:** When working with confirmation or action dialogs, always ensure that alongside disabling the action button during an asynchronous operation, explicit visual feedback like a loading spinner is provided.
