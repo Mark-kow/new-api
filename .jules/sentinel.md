@@ -1,0 +1,4 @@
+## 2025-05-05 - Fix Silent Failure and Privilege Escalation Bug in DeleteUser
+**Vulnerability:** The `DeleteUser` controller returned a `{"success": true}` JSON response even when the database hard deletion failed, masking the error. In addition, the root user was unable to delete users with an equal privilege integer (e.g., other root users) due to an incomplete RBAC comparison (`myRole <= originUser.Role`).
+**Learning:** Returning success blindly on error paths is a dangerous anti-pattern that breaks trust in API responses. Furthermore, role integer comparisons must explicitly account for root exceptions (`&& myRole != common.RoleRootUser`) to prevent locking root administrators out of essential management functions.
+**Prevention:** Always verify error paths return proper HTTP error codes via `common.ApiError` rather than blindly emitting success payloads. Standardize RBAC checks to include root bypasses for destructive operations.
