@@ -206,15 +206,19 @@ func MaskSensitiveInfo(str string) string {
 		// Mask path
 		if u.Path != "" && u.Path != "/" {
 			pathParts := strings.Split(strings.Trim(u.Path, "/"), "/")
-			maskedPathParts := make([]string, len(pathParts))
-			for i := range pathParts {
-				if pathParts[i] != "" {
-					maskedPathParts[i] = "***"
+			// ⚡ Bolt: Use strings.Builder to minimize memory allocations and improve string construction performance, avoiding the overhead of intermediate slice allocation and strings.Join combined with +.
+			var sb strings.Builder
+			sb.WriteString(result)
+			sb.WriteString("/")
+			for i, part := range pathParts {
+				if i > 0 {
+					sb.WriteString("/")
+				}
+				if part != "" {
+					sb.WriteString("***")
 				}
 			}
-			if len(maskedPathParts) > 0 {
-				result += "/" + strings.Join(maskedPathParts, "/")
-			}
+			result = sb.String()
 		} else if u.Path == "/" {
 			result += "/"
 		}
