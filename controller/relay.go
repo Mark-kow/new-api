@@ -236,7 +236,8 @@ func Relay(c *gin.Context, relayFormat types.RelayFormat) {
 
 	useChannel := c.GetStringSlice("use_channel")
 	if len(useChannel) > 1 {
-		retryLogStr := fmt.Sprintf("重试：%s", strings.Trim(strings.Join(strings.Fields(fmt.Sprint(useChannel)), "->"), "[]"))
+		// Bolt: Avoid formatting slice as string and re-parsing. Directly join instead to avoid unnecessary allocations.
+		retryLogStr := fmt.Sprintf("重试：%s", strings.Join(useChannel, "->"))
 		logger.LogInfo(c, retryLogStr)
 	}
 }
@@ -559,7 +560,8 @@ func RelayTask(c *gin.Context) {
 
 	useChannel := c.GetStringSlice("use_channel")
 	if len(useChannel) > 1 {
-		retryLogStr := fmt.Sprintf("重试：%s", strings.Trim(strings.Join(strings.Fields(fmt.Sprint(useChannel)), "->"), "[]"))
+		// Bolt: Avoid formatting slice as string and re-parsing. Directly join instead to avoid unnecessary allocations.
+		retryLogStr := fmt.Sprintf("重试：%s", strings.Join(useChannel, "->"))
 		logger.LogInfo(c, retryLogStr)
 	}
 
